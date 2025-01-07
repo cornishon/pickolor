@@ -74,19 +74,22 @@ main :: proc() {
 		img := X.GetImage(dpy, root_window, img_x, img_y, PICKER_CELLS, PICKER_CELLS, ~uint(0), .ZPixmap)
 		defer X.DestroyImage(img)
 
-		rl.BeginDrawing()
-		rl.ClearBackground(rl.BLACK)
-		for y in i32(0)..<PICKER_CELLS {
-			for x in i32(0)..<PICKER_CELLS {
-				color := ximage_color(img, x, y)
-				rl.DrawRectangle(PIXEL_SIZE*x, PIXEL_SIZE*y, PIXEL_SIZE, PIXEL_SIZE, color)
-				if y == PICKER_CELLS/2 && x == PICKER_CELLS/2 {
-					outline_color := rl.BLACK if rl.ColorToHSV(color)[2] > 0.5 else rl.WHITE
-					rl.DrawRectangleLines(PIXEL_SIZE*x, PIXEL_SIZE*y, PIXEL_SIZE, PIXEL_SIZE, outline_color)
+		{
+			rl.BeginDrawing(); defer rl.EndDrawing()
+			rl.ClearBackground(rl.BLACK)
+
+			for y in i32(0)..<PICKER_CELLS {
+				for x in i32(0)..<PICKER_CELLS {
+					color := ximage_color(img, x, y)
+					rl.DrawRectangle(PIXEL_SIZE*x, PIXEL_SIZE*y, PIXEL_SIZE, PIXEL_SIZE, color)
 				}
 			}
+
+			c :: PICKER_CELLS/2
+			outline_color := rl.BLACK if rl.ColorToHSV(ximage_color(img, c, c))[2] > 0.5 else rl.LIGHTGRAY
+			rect := rl.Rectangle{PIXEL_SIZE*c - 1, PIXEL_SIZE*c - 1, PIXEL_SIZE + 2, PIXEL_SIZE + 2}
+			rl.DrawRectangleLinesEx(rect, 2, outline_color)
 		}
-		rl.EndDrawing()
 
 		free_all(context.temp_allocator)
 	}
