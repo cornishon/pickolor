@@ -1,6 +1,9 @@
 # Pickolor
 A simple color picker for X11 which doesn't block your input
 
+## Demo
+https://github.com/cornishon/pickolor/blob/main/demo.mp4
+
 ## Setup
 
 - Install [Odin](https://odin-lang.org/)
