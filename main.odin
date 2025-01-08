@@ -10,14 +10,18 @@ import "core:math/bits"
 import "core:os"
 
 PIXELS_AROUND :: 8
-PIXEL_SIZE :: 12
-PICKER_CELLS :: 2*PIXELS_AROUND + 1
-PICKER_SIZE :: PICKER_CELLS*PIXEL_SIZE
+PIXEL_SIZE    :: 12
+PICKER_CELLS  :: 2*PIXELS_AROUND + 1
+PICKER_SIZE   :: PICKER_CELLS*PIXEL_SIZE
+FONT_SIZE     :: PICKER_SIZE/6.0
+FONT_SPACING  :: 0.1*FONT_SIZE
 
 main :: proc() {
 	rl.SetConfigFlags({.WINDOW_TOPMOST, .VSYNC_HINT, .WINDOW_UNDECORATED})
-	rl.InitWindow(PICKER_SIZE, PICKER_SIZE, "Color Picker -- Press SPACE to pick")
+	rl.InitWindow(PICKER_SIZE, PICKER_SIZE, "Press SPACE to pick")
 	defer rl.CloseWindow()
+
+	font := rl.GetFontDefault()
 
 	dpy := X.OpenDisplay("")
 
@@ -45,6 +49,11 @@ main :: proc() {
 	mouse_window: X.Window
 	X.QueryPointer(dpy, root_window, &{}, &mouse_window, &mouse_x, &mouse_y, &{}, &{}, &{})
 
+	// "#rrggbb\0"
+	color_string_buf: [8]u8
+	color_string: cstring
+	color_string_timer: f32
+
 	event_loop: for !rl.WindowShouldClose() {
 		adjust_window(mouse_x, mouse_y)
 
@@ -64,7 +73,10 @@ main :: proc() {
 			img := X.GetImage(dpy, root_window, mouse_x, mouse_y, 1, 1, ~uint(0), .ZPixmap)
 			defer X.DestroyImage(img)
 			color := ximage_color(img, 0, 0)
-			color_string := fmt.ctprintf("#{:2x}{:2x}{:2x}", color.r, color.g, color.b)
+			fmt.bprintf(color_string_buf[:], "#{:2x}{:2x}{:2x}", color.r, color.g, color.b)
+			assert(color_string_buf[len(color_string_buf)-1] == 0)
+			color_string = cstring(&color_string_buf[0])
+			color_string_timer = 1.0
 			rl.SetClipboardText(color_string)
 			fmt.println(color_string)
 		}
@@ -89,6 +101,14 @@ main :: proc() {
 			outline_color := rl.BLACK if rl.ColorToHSV(ximage_color(img, c, c))[2] > 0.5 else rl.LIGHTGRAY
 			rect := rl.Rectangle{PIXEL_SIZE*c - 1, PIXEL_SIZE*c - 1, PIXEL_SIZE + 2, PIXEL_SIZE + 2}
 			rl.DrawRectangleLinesEx(rect, 2, outline_color)
+
+			if color_string_timer > 0 {
+				color_string_timer -= rl.GetFrameTime()
+				text_size := rl.MeasureTextEx(font, color_string, FONT_SIZE, FONT_SPACING)
+				text_position: rl.Vector2 = {0.5, 0.75}*PICKER_SIZE - text_size/2
+				rl.DrawTextEx(font, color_string, text_position + 2, FONT_SIZE, FONT_SPACING, rl.BLACK)
+				rl.DrawTextEx(font, color_string, text_position, FONT_SIZE, FONT_SPACING, rl.GREEN)
+			}
 		}
 
 		free_all(context.temp_allocator)
